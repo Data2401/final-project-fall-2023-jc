@@ -17,7 +17,7 @@ knitr::opts_chunk$set(echo = TRUE)
 # Introduction
 [link here for airplane crash data](https://www.kaggle.com/datasets/saurograndi/airplane-crashes-since-1908?select=Airplane_Crashes_and_Fatalities_Since_1908.csv)
 
-This dataset is over the airplane crashes and fatalities that have occured throughout the years since 1908. Many of these are unknown while others, are historical events such as 9/11. With this data, we will be able to gain a better understanding on how the type of aircraft is correlated to the number of crashes and fatalities.
+This dataset is over the airplane crashes and fatalities that have occured throughout the years since 1908. Many of these are unknown while others, are historical events. With this data, we will be able to gain a better understanding on how the type of aircraft is correlated to the number of crashes and fatalities.
 
 
 # Get Ready
