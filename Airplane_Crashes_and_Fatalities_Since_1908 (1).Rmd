@@ -1,0 +1,495 @@
+---
+title: "Airplane Crashes Final Rough Draft"
+author: "Chau Tran & Jaretsy Noriega"
+date: "2023-11-16"
+output: [slidy_presentation]
+---
+
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+
+
+# Introduction
+[link here for airplane crash data](https://www.kaggle.com/datasets/saurograndi/airplane-crashes-since-1908?select=Airplane_Crashes_and_Fatalities_Since_1908.csv)
+
+This dataset is over the airplane crashes and fatalities that have occured throughout the years since 1908. Many of these are unknown while others, are historical events such as 9/11. With this data, we will be able to gain a better understanding on how the type of aircraft is correlated to the number of crashes and fatalities.
+
+
+# Get Ready
+```{r}
+library(readr)
+library(tidyverse)
+library(stringr)
+library(readr)
+library(ggplot2)
+library(gtable)
+library(grid)
+library(extrafont)
+library(plotly)
+```
+
+ We will read in data and store in a new variable
+```{r}
+air <- read_csv("Airplane_Crashes_and_Fatalities_Since_1908.csv", show_col_types = FALSE)
+glimpse(air)
+
+```
+
+
+# Data column descriptions
+This is the dataset column descriptions:
+
+Date: Date of accident, in the format – January 01, 2001
+
+Time: Local time, in 24 hr. format unless otherwise specified
+
+Location: Location of the accident
+
+Operator: Airline or operator of the aircraft
+
+Flight: Flight number assigned by the aircraft operator
+
+Route: Complete or partial route flown prior to the accident
+
+Type: Aircraft type
+
+Registration: ICAO registration of the aircraft
+
+cn/ln: Construction or serial number / Line or fuselage number
+
+Aboard: Total aboard (passengers / crew)
+
+Fatalities: Total fatalities aboard (passengers/crew)
+
+Ground: Total killed on the ground
+
+Summary: Brief description of the accident and cause if known
+
+
+# DATA PREPARATION 
+These are the missing values we had
+-The missing values in the time column accounts for 30% of the data in the column. 
+
+-The missing values in the flight column accounts for 74% of the data in the column.
+
+-The missing values in the registration column accounts for 5% of the data in the column.
+
+-The missing values in the cn/ln column accounts for 13% of the data in the column.
+
+I decide to drop those 4 columns. 
+
+```{r}
+
+air = subset(air, select = -c(`Flight #` , Route, Registration, `cn/In`))
+
+```
+
+
+# As we can see, the Date column is in the format Month Day, Year
+
+Because I will analyze on separate month, separate day, and separate year, I will extract the years from the Data column.
+
+First, I check the data type of the Date column. The Date column is in character.
+```{r}
+
+class(air$Date)
+
+```
+
+
+
+I convert Date from character to class 'date'. I extract year from the Date column 
+```{r}
+
+
+air$Date <- as.Date(air$Date, format = "%m/%d/%Y")
+air$year <- as.numeric(format(air$Date, "%Y"))
+air %>% mutate( year = air$year)
+
+class(air$year)
+
+```
+
+
+
+
+I did the same thing to extract day from the Date column.
+```{r}
+
+air$Date <- as.Date(air$Date, format = "%m/%d/%Y")
+air$day <- as.numeric(format(air$Date, "%d"))
+air %>% mutate( day = air$day)
+
+```
+
+
+
+
+# I use the same process to extract month from the Date column. 
+```{r}
+
+air$Date <- as.Date(air$Date, format = "%m/%d/%Y")
+air$month <- as.numeric(format(air$Date, "%m"))
+air %>% mutate( month = air$month)
+
+```
+
+
+The Location column is in the format city/region/country. I decide to split the values in 
+
+the Location column so I can perform analysis in individual areas. 
+
+First, I use the str_split_fixed() function to split the column. For example: Victoria, British, Canada becomes |Victoria|  and  |British, Canada|.
+```{r}
+
+air = air %>% mutate( country = str_split_fixed(air$Location,  ',' , 2)) 
+
+```
+
+Second, I use the gsub() function to erase the part before the comma in the second column that I just split. For example: British, Canada becomes Canada. Finally, I add that column to my data set and name it Country.
+
+```{r}
+
+
+air = air %>% mutate( Country = gsub(".*\\," , "", air$country[, 2])) 
+
+
+```
+
+
+When I look at the number of fatalities and the number of passenger aboard, I think that I could obtain
+the number of survivals by subtracting the number of fatalities from number of passenger aboard. 
+Therefore, I subtract the values in the Fatalities column from the values in the Aboard column and then add
+those new values to my data set and name it Survival. 
+
+```{r}
+
+air = air %>% mutate(Survival = Aboard - Fatalities)
+
+```
+
+# It is EDA time !
+
+I will have a quick comment on some of the metrics in the data set. 
+
+As we can see, the maximum and minimum values of the year column are 1908 and 2009. The crashes in our data are stated to range from 1908 and 2009 in the metadata. Therefore, the maximum and minimum values in the year column are correct. 
+
+
+```{r}
+
+summary(air$year)
+
+```
+
+Next, the third quartile of the ground column is 0. Therefore, we know that there are at least 75% of the crashes did not kill any people on the ground. The mean, however, is 3 people. The maximum value of the ground column is 2750 people. That indicates there is a crash that killed 2750 people on the ground. The value 2750 
+is very likely an outlier which affects the mean. This extreme outlier is why the mean is greater than the median and even greater than the third quartile. Overall, it is bad to know such a big number of people killed, but now we could know that most of the time when a plane crashes, and we are not in the plane, we are very safe. 
+
+```{r}
+
+
+summary(air$Ground)
+
+
+```
+
+
+
+Now let's look at the statistics of number of passengers aboard and number of fatalities together!
+The minimum, median, maximum of the number of passengers aboard are 0, 16, 644 respectively. The minimum, median, maximum of the number of fatalities are 0, 10, 583 respectively. We can sort of see that the number of fatalities increases as the number of passenger aboard increases. 
+```{r}
+
+summary(air$Aboard)
+
+```
+
+ 
+```{r}
+
+summary(air$Fatalities)
+
+```
+
+
+
+
+# Let's look at number of passengers on board and the number of fatalities over years. 
+Looking at the graph, the number of fatalities seems to increase as the number of passengers increase. There seems to be a big gap between 
+the 2 lines at year 1999. 
+```{r}
+
+a = air %>% group_by(year) %>% summarise( Fa = sum(Fatalities))
+
+  
+b = air %>% group_by(year) %>% summarise( A = sum(Aboard))
+
+c = inner_join(a,b)
+
+
+p1 = c %>% ggplot( aes( x= year))
+p1 = p1 + geom_line(aes(y = Fa), color = "red")
+p1 = p1 + geom_line(aes(y = A), color = "blue")
+
+ggplotly(p1)
+```
+
+
+
+# Let's look at the the number of survivals and the number of fatalities by year
+
+Based on the graph, the number of fatalities is almost always quite higher than the number of survivals. From 1908 to 1998, there are always more people killed than survived. Only in year 1999, the number of survivors was higher than the number of fatalities a little bit. After year 1999, however, the number of fatalities went back to being higher than the number of survivals again from 2000 to 2009. Therefore, I think that there is not any odd or long term factors in year 1999 that made the more people survived because the change is just a bit. 
+
+
+```{r}
+class(air$Fatalities) 
+
+
+
+a = air %>% group_by(year) %>% summarise( Fa = sum(Fatalities))
+b = air %>% group_by(year) %>% summarise( S = sum(Survival))
+c = inner_join(a,b)
+
+p1 = c %>% ggplot( aes( x= year))
+p1 =p1 + geom_line(aes(y = Fa), color = "red")
+p1 = p1 + geom_line(aes(y = S), color = "green")
+
+ggplotly(p1)
+
+```
+
+# Let's look at the the number of survivals and the number of fatalities in year 1999 to see if my guess is right!
+As we can see, year 1999 just happens to have 2 big flights on date 7/23 and 12/21 and luckily, the number of survivors on those two fligths are 516 and 298. In summary, year 1999 happens to have 2 big flights and both big flights happen to survive the almost all, bringing up the total number of survivals in that year to be bigger than the number of fatalities. After analysis on both graph, we can see that whenever a plane crashes, there is always tiny chance to survive. 
+
+
+```{r}
+
+
+a = air %>% filter(year == 1999) %>% group_by(Date) %>%summarise( S = sum(Survival))
+b = air %>% filter(year == 1999) %>% group_by(Date) %>%summarise( Fa = sum(Fatalities))
+
+
+
+c = inner_join(a,b)
+
+p1 = c %>% ggplot( aes( x= Date))
+p1 = p1 + geom_line(aes(y = Fa), color = "red")
+p1 = p1 + geom_line(aes(y = S), color = "green")
+
+ggplotly(p1)
+```
+
+
+
+# Let's look at the number of crashes by year. 
+
+Based on the graph, the number of crashes increased tremendously from 1940 to 1946 and then stay in that range from 1947 to 1989.
+
+The number of crashes in year 1972 was the highest. 
+
+After that, we can see a trend that the number of crashes starts to decrease from year 1994 to year 2009.
+```{r}
+
+n = air %>% group_by(year) %>% summarise( accident = n()) %>% 
+  ggplot() + aes(x = year, y = accident)  + geom_line() 
+ggplotly(n)
+
+```
+
+
+
+
+# Let's look at the number of crashes by operator
+
+Looking at the bar graph, the  Aeroflot and Military - U.S. Air Force are two operators that have the most crashes
+
+```{r}
+
+air %>% group_by(Operator) %>% summarise( accident = n()) %>% arrange(-accident) %>% head(10) %>% 
+  ggplot() + aes(x = Operator, y = accident) + geom_col() + coord_flip()
+
+```
+
+I want to see what years Aeroflot crashed the most.
+Based on the graph, it seems like the 2 operators constantly had crashes from around 1957 to 1990 
+```{r}
+
+a = air %>% filter(Operator == 'Aeroflot') %>% group_by(year) %>% summarise( crash = n()) %>% arrange(-crash) %>% 
+   ggplot() + aes(x = year, y = crash) + geom_col() + ggtitle('Years Aeroflot had the most crashes')
+ggplotly(a)
+
+m = air %>% filter(Operator == 'Military - U.S. Air Force') %>% group_by(year) %>% summarise( crash = n()) %>% arrange(-crash) %>% 
+   ggplot() + aes(x = year, y = crash) + geom_col() + ggtitle('Years Military - U.S. Air Force had the most crashes')
+ggplotly(m)
+
+
+
+```
+
+
+
+# Let's see what countries those 2 operators crashed
+Looking at those 2 visualization, these 2 operators were probably used a lot during the Cold War. 
+Although Aeroflot had the most crashes in Russia, it also had a lot of crashes when Russia was the USSR. The Aeroflot also crashed in 
+East Germany, North Korea, Cuba, which were the satellite state of the USSR. 
+As for the Military - U.S. Air Force, although the Operator belongs to the United State, it seems to crash a lot in foreign countries which I suppose there was a proxy war in those foreign countries. 
+```{r}
+
+a = air %>% filter(Operator == 'Aeroflot') %>% group_by(Country) %>% summarise( crash = n()) %>% arrange(-crash) %>% 
+   ggplot() + aes( x = Country, y = crash) + geom_col() + ggtitle('Countries where Aeroflot had the most crashes') + 
+  theme(axis.text.x = element_text(angle = 90))
+
+ggplotly(a)
+
+m = air %>% filter(Operator == 'Military - U.S. Air Force') %>% group_by(Country) %>% summarise( crash = n()) %>% arrange(-crash) %>% 
+   ggplot() + aes(x = Country, y = crash) + geom_col() + ggtitle('Countries where Military - U.S. Air Force had the most crashes') + 
+  theme(axis.text.x = element_text(angle = 90))
+
+ggplotly(m)
+
+
+
+```
+
+
+
+
+
+# Let's look at the number of crashes by type 
+
+Based on the bar graph, Douglas DC-3 has the most crashes.
+
+```{r}
+
+air %>% group_by(Type) %>% summarise( accident = n()) %>% arrange(-accident) %>% head(10) %>% 
+  ggplot() + aes(x = Type, y = accident) + geom_col() + coord_flip()
+
+```
+
+Let's see what years Douglas DC-3 crashed the most. 
+
+```{r}
+
+air %>% filter(Type == 'Douglas DC-3') %>% group_by(year) %>% summarise( Year = n()) %>% arrange(-Year) %>% 
+  head(10) 
+
+```
+
+
+
+
+
+
+
+
+
+
+
+# Let's look at the number of passenger killed aboard and the number of people killed on the grounds.
+As we can see, the number of passenger killed aboard is alsmot always greater than the number of people killed on the grounds except for 
+year 2001 in which the number of passenger killed on the ground is much greater than the number of people dead aboard 
+```{r}
+
+a = air %>% group_by(year) %>% summarise( Fa = sum(Fatalities))
+
+  
+b = air %>% group_by(year) %>% summarise( G = sum(Ground))
+
+c = inner_join(a,b)
+
+
+
+p1 = c %>% ggplot( aes( x= year))
+p1 = p1 + geom_line(aes(y = Fa), color = "red")
+p1 = p1 + geom_line(aes(y = G), color = "blue")
+ggplotly(p1)
+
+
+```
+
+
+# Let's zoom in year 2001 and see the number of people killed on the Ground by month.
+Based on the bar graph, September is where the number of all people killed on the ground in 2001 lie. 
+
+```{r}
+
+m = air %>% filter( year == 2001) %>% group_by(month) %>% summarise( ground = sum(Ground)) %>% 
+  ggplot() + aes(x = month, y = ground)  + geom_col()  
+ggplotly(m)
+
+```
+
+Let's zoom in September and see what day the number of people killed on the ground lie. Looking at the graph, it lied on day 11. 
+
+```{r}
+
+d = air %>% filter( year == 2001, month == 9) %>% group_by(day) %>% summarise( ground = sum(Ground)) %>% 
+  ggplot() + aes(x = day, y = ground)  + geom_col()  
+
+ggplotly(d)
+
+```
+
+
+Now that we know the day and month, let's zoom to September 11, 2001 to see what airplanes crashed on this day.
+Looking at the bar graph, we found out that the three planes Boeing 767-223ER, Boeing B-757-223, and Boeing B-767-222 are the planes that killed more people on the ground than their own passengers. 
+
+```{r}
+
+air %>% filter( year == 2001, month == 9, day == 11) %>% group_by(Type) %>% 
+  ggplot() + aes(x = Type, y = Ground)  + geom_col()
+
+```
+
+
+
+
+
+
+
+
+# Let's look at the number of crashes by month. The number of crashes seems to be distributed quite equally among all months
+```{r}
+
+air %>% group_by(month) %>% summarise( accident = n()) %>% 
+  ggplot() + aes(x = month, y = accident)  + geom_col()   
+
+ 
+```
+
+# Let's look at the number of crashes by day. The number of crashes seems to be distributed quite equally among all days. 
+So no matter what month or day we choose to travel, there is no guarantee that a plane does not crash. 
+```{r}
+
+air %>% group_by(day) %>% summarise( accident = n()) %>% 
+  ggplot() + aes(x = day, y = accident)  + geom_col()   
+
+
+```
+
+
+
+
+# Let's look at the number of crashes by countries. 
+Based on the graph, we could infer that the United States probably has the most crashes because 2 of its states Alaska and California lie in the top 10 countries that have the highest number of crashes. That is interesting to know when a state like Alaska has higher number of crashes than a whole country like Russia. 
+
+```{r}
+
+
+a = air %>% group_by(Country) %>% summarise( accident = n()) %>% arrange(-accident) %>% head(10) %>% 
+  ggplot() + aes( x = Country, y = accident)  + geom_col()   
+
+ggplotly(a)
+
+```
+
+# SUMMARY
+Based on the data, we can obtain the number of passengers and survivors, as well what type of aircraft they were on. We can also see which type of aircraft had the most and least crashes from 1908 to 2009. The limitations of this dataset is that it only contains the number of crashes and not the total number of flights throughout those years stated above. If we were to know the total number of flights we could obtain the ratio for them. This makes us wonder that it could be that we might have more crashes because there are more flights as more people tend to fly as the years progress. For example, in 2009 the dataset only included the total number of crashes and not the total flights that year. 
+
+
+
+
+
