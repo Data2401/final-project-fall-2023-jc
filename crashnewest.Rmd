@@ -205,6 +205,10 @@ Ground: Total killed on the ground
 
 Summary: Brief description of the accident and cause if known
 
+# INTRODUCTION 
+
+As you know, in Texas, traffic accidents are something we witness almost every week or every day with our own eyes. However, it is not common to witness aviation accidents and learn about them. For such a large block of metal to fly into the sky, humans must have put in a lot of effort to make that happen. Therefore, we are curious on what kind of impact and involvement people might have when something that big comes down. 
+
 # QUESTIONS 
 
 Domain question: 
